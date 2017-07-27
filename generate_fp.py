@@ -1,138 +1,244 @@
 
+from os import getcwd, mkdir, chdir
 from mendeleev import element
-from os.path import isfile
+from ase import Atoms
 import numpy as np
-import hashlib
+import warnings
 import pickle
-import time
 
-def gen_fp(A,B,bound_ads,secondary_ads,hash_id):
-	fp = []
-	fp_instructions = []
+warnings.simplefilter('error',UserWarning)
 
-	# Bulk properties will need to be loaded
-	# or passed here intelligently somehow
-	# - not currently implemented
+def gen_fp(fp, # List of fingerprint types to use
+        A_id, # String containing elemental abbreviation for A metal
+        B_id, # String containing elemental abbreviation for B metal
+        ads_id, # String containing elemental abbreviation for
+                     # adsorbate atoms
+        target_value, # Adsorption energy; float
+        ):
+
+        fp_vals = []
+        # Bulk properties will need to be loaded
+        # or passed here intelligently somehow
+        # - not currently implemented
+
+# Warnings
+        if ('primary_ads.pauling_electronegativity' in fp) and \
+                ('all_ads.sum_pauling_electronegativity' in fp):
+		warnings.warn('Warning: '
+                'primary_ads.pauling_electronegativity and '
+                'all_ads.sum_pauling_enegativity are identical for '
+                'monatomic adsorbates')
+
 
 # A Block
-	if False: # Use A.atomic_number
-		ele = element(A)
-		Z = ele.atomic_number
-		fp.append(Z)
-		fp_instructions.append('A.atomic_number')
+        if 'A.atomic_number' in fp:
+                ele = element(A_id)
+                Z = ele.atomic_number
+                fp_vals.append(Z)
 
-	if False: # Use A.atomic_radius
-		ele = element(A)
-		rad = ele.atomic_radius
-		fp.append(rad)
-		fp_instructions.append('A.atomic_radius')
+        if 'A.atomic_radius' in fp:
+                ele = element(A_id)
+                rad = ele.atomic_radius
+                fp_vals.append(rad)
 
-	if False: # Use A.pauli_electronegativity
-		ele = element(A)
-		eneg = ele.en_pauling
-		fp.append(eneg)
-		fp_instructions.append('A.pauli_electronegativity')
+        if 'A.pauling_electronegativity' in fp:
+                ele = element(A_id)
+                eneg = ele.en_pauling
+                fp_vals.append(eneg)
 
-	if False: # Use A.polarizability
-		ele = element(A)
-		polarization = ele.dipole_polarizability	
-		fp.append(polarization)
-		fp_instructions.append('A.dipole_polarizability')
+        if 'A.dipole_polarizability' in fp:
+                ele = element(A_id)
+                polarization = ele.dipole_polarizability	
+                fp_vals.append(polarization)
 
-	if False: # Use A.first_ionization_energy
-		ele = element(A)
-		first_ionization = ele.ionenergies[1]
-		fp.append(first_ionization)
-		fp_instructions.append('A.first_ionization_energy')
+        if 'A.first_ionization_energy' in fp:
+                ele = element(A_id)
+                first_ionization = ele.ionenergies[1]
+                fp_vals.append(first_ionization)
 
-	if False: # Use A.period
-		ele = element(A)
-		period = ele.period
-		fp.append(period)
-		fp_instructions.append('A.period')
+        if 'A.period' in fp:
+                ele = element(A_id)
+                period = ele.period
+                fp_vals.append(period)
 
 # B Block
-	if False: # Use B.atomic_number
-		ele = element(B)
-		Z = ele.atomic_number
-		fp.append(Z)
-		fp_instructions.append('B.atomic_number')
+        if 'B.atomic_number' in fp:
+                ele = element(B_id)
+                Z = ele.atomic_number
+                fp_vals.append(Z)
 
-	if False: # Use B.atomic_radius
-		ele = element(B)
-		rad = ele.atomic_radius
-		fp.append(rad)
-		fp_instructions.append('B.atomic_radius')
+        if 'B.atomic_radius' in fp:
+                ele = element(B_id)
+                rad = ele.atomic_radius
+                fp_vals.append(rad)
 
-	if False: # Use B.pauli_electronegativity
-		ele = element(B)
-		eneg = ele.en_pauling
-		fp.append(eneg)
-		fp_instructions.append('B.pauli_electronegativity')
+        if 'B.pauling_electronegativity' in fp:
+                ele = element(B_id)
+                eneg = ele.en_pauling
+                fp_vals.append(eneg)
 
-	if False: # Use B.polarizability
-		ele = element(B)
-		polarization = ele.dipole_polarizability	
-		fp.append(polarization)
-		fp_instructions.append('B.dipole_polarizability')
+        if 'B.dipole_polarizability' in fp:
+                ele = element(B_id)
+                polarization = ele.dipole_polarizability	
+                fp_vals.append(polarization)
 
-	if False: # Use B.first_ionization_energy
-		ele = element(B)
-		first_ionization = ele.ionenergies[1]
-		fp.append(first_ionization)
-		fp_instructions.append('B.first_ionization_energy')
+        if 'B.first_ionization_energy' in fp:
+                ele = element(B_id)
+                first_ionization = ele.ionenergies[1]
+                fp_vals.append(first_ionization)
 
-	if False: # Use B.period
-		ele = element(B)
-		period = ele.period
-		fp.append(period)
-		fp_instructions.append('B.period')
+        if 'B.period' in fp:
+                ele = element(B_id)
+                period = ele.period
+                fp_vals.append(period)
 
-# Bound Ads Block
+# Ads Block
 
+	# Determine the primary adsorbate
+	if ads_id in ['O', 'OH', 'OOH']:
+		primary_ads_id = 'O'
+	elif ads_id in ['H_M']:
+		primary_ads_id = 'H'
+	elif ads_id in ['N', 'NH', 'NH2', 'NNH']:
+		primary_ads_id = 'N'
 
-# Secondary Ads Block
+	# Determine the secondary adsorbates
+	if ads_id in ['OH', 'NH']:
+		secondary_ads_id = ['H']
+	elif ads_id in ['OOH']:
+		secondary_ads_id = ['O']
+	elif ads_id in ['NH2']:
+		secondary_ads_id = ['H', 'H']
+	elif ads_id in ['NNH']:
+		secondary_ads_id = ['N']
+	elif ads_id in ['O', 'H_M', 'N']:
+		secondary_ads_id = []
 
+        if 'primary_ads.atomic_number' in fp:
+                ele = element(primary_ads_id)
+                Z = ele.atomic_number
+                fp_vals.append(Z)
 
-# Output Instructions and Return
-        md_filename = 'fp_%s.md'%hash_id
-        if not isfile(md_filename):
-                md_file = open(md_filename,'w')
-		for instruction in fp_instructions:
-			print >>md_file,instruction
-		md_file.close()
-	return fp
+        if 'primary_ads.atomic_radius' in fp:
+                ele = element(primary_ads_id)
+                rad = ele.atomic_radius
+                fp_vals.append(rad)
 
+        if 'primary_ads.pauling_electronegativity' in fp:
+                ele = element(primary_ads_id)
+                eneg = ele.en_pauling
+                fp_vals.append(eneg)
 
-def gen_hash_id():
-	# Generates a unique string of length 32
-	# to easily separate all attempts
-	h = hashlib.md5()
-	h.update(str(time.time()))
-	h_id = h.hexdigest()
-	return h_id
+        if 'primary_ads.dipole_polarizability' in fp:
+                ele = element(primary_ads_id)
+                polarization = ele.dipole_polarizability	
+                fp_vals.append(polarization)
 
-def normalize(M,hash_id,normalize_target=True):
+        if 'primary_ads.first_ionization_energy' in fp:
+                ele = element(primary_ads_id)
+                first_ionization = ele.ionenergies[1]
+                fp_vals.append(first_ionization)
+
+        if 'primary_ads.period' in fp:
+                ele = element(primary_ads_id)
+                period = ele.period
+                fp_vals.append(period)
+
+        if 'all_ads.sum_pauling_electronegativity' in fp:
+                base_ele = element(primary_ads_id)
+                sum_eneg = base_ele.en_pauling
+                for secondary_ele_id in secondary_ads_id:
+                        secondary_ele = element(secondary_ele_id)
+                        secondary_eneg = secondary_ele.en_pauling
+                        sum_eneg -= secondary_eneg
+                fp_vals.append(sum_eneg)
+
+# Adds target value
+	fp_vals.append(target_value)
+
+# Return
+	return fp_vals
+
+def normalize(M,normalize_target=True):
 	# Normalize a matrix based on mean and
 	# variance.  May or may not include
 	# target values
-	if normalize_target:
-		temp = M[:,-1]
+        if not normalize_target:
+                temp = M[:,-1]
 
-	mean_vals = np.average(M,axis=0)
-	std_vals = np.std(M,axis=0)
-	M_p = np.divide(M-mean_vals,std_vals)
+        mean_vals = np.average(M,axis=0)
+        std_vals = np.std(M,axis=0)
+        M_p = np.divide(M-mean_vals,std_vals)
 
-	if normalize_target:
-		M[:,-1] = temp
-		std_vals[-1] = 1
-		mean_vals[-1] = 0
+        if not normalize_target:
+                M_p[:,-1] = temp
+                std_vals[-1] = 1
+                mean_vals[-1] = 0
 
-	
+        output_file = open('normalization_parameters.pickle','w')
+        output = {'mean_vals': mean_vals, 'std_vals': std_vals}
+        pickle.dump(output,output_file)
+        output_file.close()
 
-	return M
+        return M_p
+
+# Set up environment
+cwd = getcwd()
+newdir_index = 1 # Set to minimum unused integer based on SQL ids
+newdir = 'fp_%05d'%newdir_index
 
 # Load Data
-data = pickle.load(open('data_summary.pickle'))
+data = pickle.load(open('../data_summary.pickle'))
+
+fp_all_options = [
+        'A.atomic_number', 'A.atomic_radius', 'A.pauling_electronegativity',
+        'A.dipole_polarizability', 'A.first_ionization_energy', 'A.period',
+        'B.atomic_number', 'B.atomic_radius', 'B.pauling_electronegativity',
+        'B.dipole_polarizability', 'B.first_ionization_energy', 'B.period',
+	# primary_ads refers only to the adsorbate atom bound to the surface
+        'primary_ads.atomic_number', 'primary_ads.atomic_radius',
+	'primary_ads.pauling_electronegativity','primary_ads.dipole_polarizability',
+	'primary_ads.first_ionization_energy', 'primary_ads.period',
+	# all_ads refer to all adsorbate atoms
+	'all_ads.sum_pauling_electronegativity'
+	]
+
+this_fp = [
+           'A.atomic_number',
+           'B.atomic_number',
+           'primary_ads.atomic_number'
+          ]
+
+# if fp has not been used before
+#mkdir(newdir)
+#chdir(newdir)
+md_filename = 'fp_instructions.md'
+md_file = open(md_filename,'w')
+for instruction in this_fp:
+        print >>md_file,instruction
+md_file.close()
+
+exclude_ads = ['O2', 'H_O'] # Leaves 1,534 points
+n_features = len(this_fp)
+fp_vals = np.empty(n_features+1)
+fp_keys = []
+
+for key in data.keys():
+        atoms_object = Atoms(key)
+        A_id = atoms_object[0].symbol
+        B_id = atoms_object[1].symbol
+        for ads_id in data[key].keys():
+                if ads_id not in exclude_ads:
+                        this_target = data[key][ads_id]
+                        this_fp_val = gen_fp(this_fp, A_id, B_id,
+	                        ads_id, this_target)
+                        fp_vals = np.vstack((fp_vals, this_fp_val))
+			fp_keys.append('%s, %s ads'%(key,ads_id))
+
+fp_vals = fp_vals[1:,:]
+fp_vals = normalize(fp_vals)
+
+# if fp has been used before
+        #print 'fp has been used before, check '+path_to_fp
 
 
