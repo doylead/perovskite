@@ -3,7 +3,10 @@ from os import getcwd, mkdir, chdir
 from mendeleev import element
 from ase import Atoms
 import numpy as np
+import warnings
 import pickle
+
+warnings.simplefilter('error',UserWarning)
 
 def gen_fp(fp, # List of fingerprint types to use
         A_id, # String containing elemental abbreviation for A metal
@@ -17,6 +20,15 @@ def gen_fp(fp, # List of fingerprint types to use
         # Bulk properties will need to be loaded
         # or passed here intelligently somehow
         # - not currently implemented
+
+# Warnings
+        if ('primary_ads.pauling_electronegativity' in fp) and \
+                ('all_ads.sum_pauling_electronegativity' in fp):
+		warnings.warn('Warning: '
+                'primary_ads.pauling_electronegativity and '
+                'all_ads.sum_pauling_enegativity are identical for '
+                'monatomic adsorbates')
+
 
 # A Block
         if 'A.atomic_number' in fp:
@@ -95,12 +107,12 @@ def gen_fp(fp, # List of fingerprint types to use
 		secondary_ads_id = ['H']
 	elif ads_id in ['OOH']:
 		secondary_ads_id = ['O']
-	elif ads_id in ['NH2']
+	elif ads_id in ['NH2']:
 		secondary_ads_id = ['H', 'H']
-	elif ads_id in ['NNH']
+	elif ads_id in ['NNH']:
 		secondary_ads_id = ['N']
 	elif ads_id in ['O', 'H_M', 'N']:
-		secondary_ads_id = None # This should probably be updated
+		secondary_ads_id = []
 
         if 'primary_ads.atomic_number' in fp:
                 ele = element(primary_ads_id)
@@ -132,8 +144,20 @@ def gen_fp(fp, # List of fingerprint types to use
                 period = ele.period
                 fp_vals.append(period)
 
+        if 'all_ads.sum_pauling_electronegativity' in fp:
+                base_ele = element(primary_ads_id)
+                sum_eneg = base_ele.en_pauling
+                for secondary_ele_id in secondary_ads_id:
+                        secondary_ele = element(secondary_ele_id)
+                        secondary_eneg = secondary_ele.en_pauling
+                        sum_eneg -= secondary_eneg
+                fp_vals.append(sum_eneg)
+
+# Adds target value
+	fp_vals.append(target_value)
+
 # Return
-	return fp
+	return fp_vals
 
 def normalize(M,normalize_target=True):
 	# Normalize a matrix based on mean and
@@ -176,30 +200,44 @@ fp_all_options = [
 	'primary_ads.pauling_electronegativity','primary_ads.dipole_polarizability',
 	'primary_ads.first_ionization_energy', 'primary_ads.period',
 	# all_ads refer to all adsorbate atoms
-	'all_ads.sum_pauling_enegativity'
+	'all_ads.sum_pauling_electronegativity'
 	]
 
-this_fp = ['A.atomic_number','B.atomic_number']
+this_fp = [
+           'A.atomic_number',
+           'B.atomic_number',
+           'primary_ads.atomic_number'
+          ]
 
 # if fp has not been used before
 #mkdir(newdir)
-chdir(newdir)
+#chdir(newdir)
 md_filename = 'fp_instructions.md'
 md_file = open(md_filename,'w')
 for instruction in this_fp:
         print >>md_file,instruction
 md_file.close()
 
-fp_vals = np.array()
+exclude_ads = ['O2', 'H_O']
+n_features = len(this_fp)
+fp_vals = np.empty(n_features+1)
+fp_keys = []
+
 for key in data.keys():
         atoms_object = Atoms(key)
         A_id = atoms_object[0].symbol
         B_id = atoms_object[1].symbol
-	for ads_key in data[key].keys():
-		this_fp_val = gen_fp(this_fp, A_id, B_id,
-			
-        fp_vals = np.vstack(fp_vals,
-		
+        for ads_id in data[key].keys():
+                if ads_id not in exclude_ads:
+                        this_target = data[key][ads_id]
+                        this_fp_val = gen_fp(this_fp, A_id, B_id,
+	                        ads_id, this_target)
+                        fp_vals = np.vstack((fp_vals, this_fp_val))
+			fp_keys.append('%s, %s ads'%(key,ads_id))
+
+fp_vals = fp_vals[1:,:]
+fp_vals = normalize(fp_vals)
+print fp_vals
 
 # if fp has been used before
         #print 'fp has been used before, check '+path_to_fp
