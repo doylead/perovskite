@@ -171,16 +171,16 @@ def normalize(M,normalize_target=True):
         M_p = np.divide(M-mean_vals,std_vals)
 
         if not normalize_target:
-                M[:,-1] = temp
+                M_p[:,-1] = temp
                 std_vals[-1] = 1
                 mean_vals[-1] = 0
 
         output_file = open('normalization_parameters.pickle','w')
         output = {'mean_vals': mean_vals, 'std_vals': std_vals}
-        pickle.dump(output_file,output)
+        pickle.dump(output,output_file)
         output_file.close()
 
-        return M
+        return M_p
 
 # Set up environment
 cwd = getcwd()
@@ -218,7 +218,7 @@ for instruction in this_fp:
         print >>md_file,instruction
 md_file.close()
 
-exclude_ads = ['O2', 'H_O']
+exclude_ads = ['O2', 'H_O'] # Leaves 1,534 points
 n_features = len(this_fp)
 fp_vals = np.empty(n_features+1)
 fp_keys = []
@@ -237,7 +237,6 @@ for key in data.keys():
 
 fp_vals = fp_vals[1:,:]
 fp_vals = normalize(fp_vals)
-print fp_vals
 
 # if fp has been used before
         #print 'fp has been used before, check '+path_to_fp
