@@ -1,7 +1,10 @@
 
+import sys
+sys.path.append('database_scripts')
+
 from database import add_feature_set
-from os import getcwd, mkdir, chdir
 from mendeleev import element
+from os import mkdir, chdir
 from ase import Atoms
 from math import ceil
 from sys import exit
@@ -185,36 +188,59 @@ def normalize(M,normalize_target=True):
 
         return M_p
 
-# Set up environment
-cwd = getcwd()
-
 # Load Data
 data = pickle.load(open('../data_summary.pickle'))
 
+# ----- <START: Users should only modify code within this block> ----- #
+exclude_ads = ['O2', 'H_O'] # Leaves 1,534 points
+n_total = 0
+for key in data.keys():
+        all_ads = data[key].keys()
+        included_ads = [ads for ads in all_ads if ads not in exclude_ads]
+	n_total += len(included_ads)
+
+if True:
+        train_frac = 0.90 # Train on 90% of the data
+        n_train = int(ceil(train_frac * n_total))
+        n_test = int(n_total - n_train)
+else:
+        n_train = 1 # User-specified
+        n_train = int(n_train)
+        n_test = int(n_total - n_train)
+
+# Provided for easy reference, never called within script
 fp_all_options = [
         'A.atomic_number', 'A.atomic_radius', 'A.pauling_electronegativity',
         'A.dipole_polarizability', 'A.first_ionization_energy', 'A.period',
         'B.atomic_number', 'B.atomic_radius', 'B.pauling_electronegativity',
         'B.dipole_polarizability', 'B.first_ionization_energy', 'B.period',
-	# primary_ads refers only to the adsorbate atom bound to the surface
+        # primary_ads refers only to the adsorbate atom bound to the surface
         'primary_ads.atomic_number', 'primary_ads.atomic_radius',
-	'primary_ads.pauling_electronegativity','primary_ads.dipole_polarizability',
-	'primary_ads.first_ionization_energy', 'primary_ads.period',
-	# all_ads refer to all adsorbate atoms
-	'all_ads.sum_pauling_electronegativity'
+        'primary_ads.pauling_electronegativity','primary_ads.dipole_polarizability',
+        'primary_ads.first_ionization_energy', 'primary_ads.period',
+        # all_ads refer to all adsorbate atoms
+        'all_ads.sum_pauling_electronegativity'
 	]
 
 this_fp = [
-           'A.atomic_number',
-           'B.atomic_number',
-           'primary_ads.atomic_number'
+           'A.atomic_radius',
+           'A.pauling_electronegativity',
+           'A.dipole_polarizability',
+           'A.first_ionization_energy',
+           'B.atomic_radius',
+           'B.pauling_electronegativity',
+           'B.dipole_polarizability',
+           'B.first_ionization_energy',
+           'all_ads.sum_pauling_electronegativity',
+           'train.n=%d'%n_train # Leave this in
           ]
 
 
-# if fp has not been used before
+# ------ <END: Users should only modify code within this block> ------ #
+
 ID,status = add_feature_set(this_fp,'data.db')
 if status=='already existed':
-        print 'Feature set already exists for fisd %d'%ID
+        print 'Feature set already exists, check %05f'%ID
 	exit()
 
 newdir_index = ID
@@ -227,8 +253,7 @@ for instruction in this_fp:
         print >>md_file,instruction
 md_file.close()
 
-exclude_ads = ['O2', 'H_O'] # Leaves 1,534 points
-n_features = len(this_fp)
+n_features = len(this_fp) - 1 # Because train.n is not used in regression
 fp_vals = np.empty(n_features+1)
 fp_keys = []
 
@@ -240,7 +265,7 @@ for key in data.keys():
                 if ads_id not in exclude_ads:
                         this_target = data[key][ads_id]
                         this_fp_val = gen_fp(this_fp, A_id, B_id,
-	                        ads_id, this_target)
+                                ads_id, this_target)
                         fp_vals = np.vstack((fp_vals, this_fp_val))
 			fp_keys.append('%s, %s ads'%(key,ads_id))
 
@@ -248,11 +273,6 @@ fp_vals = fp_vals[1:,:]
 fp_vals = normalize(fp_vals)
 
 # Distributes the training and test sets
-## Trying 10% test, 90% training (and validation)
-n_total = len(fp_keys)
-n_test = int(ceil(0.1*n_total))
-n_train = int(n_total - n_test)
-
 centroids = []
 centroid_ids = []
 centroids.append( fp_vals[0,:] )
@@ -280,11 +300,15 @@ for i in range(n_total):
 		test_fp_keys.append(key)
 		test_fp_vals = np.vstack((test_fp_vals,fp_vals[i,:]))
 
-train_fp_vals = train_fp_vals[1:,:]
-test_fp_vals = test_fp_vals[1:,:]
+train_targets = train_fp_vals[1:,-1]
+test_targets = test_fp_vals[1:,-1]
 
-feature_matrices = {'training_values':train_fp_vals, 'training_labels':train_fp_keys,
-        'test_values':test_fp_vals, 'test_labels':test_fp_keys}
+train_fp_vals = train_fp_vals[1:,:-1]
+test_fp_vals = test_fp_vals[1:,:-1]
+
+feature_matrices = {'train_values':train_fp_vals, 'train':train_fp_keys,
+        'test_values':test_fp_vals, 'test_labels':test_fp_keys,
+        'train_targets': train_targets, 'test_targets': test_targets}
 
 output_file = open('data.pickle','w')
 pickle.dump(feature_matrices,output_file)
