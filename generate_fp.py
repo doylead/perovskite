@@ -1,7 +1,10 @@
 
+from database import add_feature_set
 from os import getcwd, mkdir, chdir
 from mendeleev import element
 from ase import Atoms
+from math import ceil
+from sys import exit
 import numpy as np
 import warnings
 import pickle
@@ -184,8 +187,6 @@ def normalize(M,normalize_target=True):
 
 # Set up environment
 cwd = getcwd()
-newdir_index = 1 # Set to minimum unused integer based on SQL ids
-newdir = 'fp_%05d'%newdir_index
 
 # Load Data
 data = pickle.load(open('../data_summary.pickle'))
@@ -209,9 +210,17 @@ this_fp = [
            'primary_ads.atomic_number'
           ]
 
+
 # if fp has not been used before
-#mkdir(newdir)
-#chdir(newdir)
+ID,status = add_feature_set(this_fp,'data.db')
+if status=='already existed':
+        print 'Feature set already exists for fisd %d'%ID
+	exit()
+
+newdir_index = ID
+newdir = 'fp_%05d'%newdir_index
+mkdir(newdir)
+chdir(newdir)
 md_filename = 'fp_instructions.md'
 md_file = open(md_filename,'w')
 for instruction in this_fp:
@@ -238,7 +247,46 @@ for key in data.keys():
 fp_vals = fp_vals[1:,:]
 fp_vals = normalize(fp_vals)
 
-# if fp has been used before
-        #print 'fp has been used before, check '+path_to_fp
+# Distributes the training and test sets
+## Trying 10% test, 90% training (and validation)
+n_total = len(fp_keys)
+n_test = int(ceil(0.1*n_total))
+n_train = int(n_total - n_test)
 
+centroids = []
+centroid_ids = []
+centroids.append( fp_vals[0,:] )
+centroid_ids.append( fp_keys[0] )
+for i in range(1,n_train):
+        diff = np.linalg.norm(fp_vals - centroids[0], axis=1)
+        for j in range(1,i):
+                new_diff = np.linalg.norm(fp_vals - centroids[j], axis=1)
+                diff = np.minimum( diff, new_diff )
+	argmax = np.argmax(diff)
+        centroids.append( fp_vals[argmax,:] )
+        centroid_ids.append( fp_keys[argmax] )
+
+train_fp_vals = np.empty(n_features+1)
+train_fp_keys = []
+test_fp_vals = np.empty(n_features+1)
+test_fp_keys = []
+
+for i in range(n_total):
+	key = fp_keys[i]
+	if key in centroid_ids:
+		train_fp_keys.append(key)
+		train_fp_vals = np.vstack((train_fp_vals,fp_vals[i,:]))
+	else:
+		test_fp_keys.append(key)
+		test_fp_vals = np.vstack((test_fp_vals,fp_vals[i,:]))
+
+train_fp_vals = train_fp_vals[1:,:]
+test_fp_vals = test_fp_vals[1:,:]
+
+feature_matrices = {'training_values':train_fp_vals, 'training_labels':train_fp_keys,
+        'test_values':test_fp_vals, 'test_labels':test_fp_keys}
+
+output_file = open('data.pickle','w')
+pickle.dump(feature_matrices,output_file)
+output_file.close()
 
