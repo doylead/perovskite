@@ -9,10 +9,8 @@ from ase import Atoms
 from math import ceil
 from sys import exit
 import numpy as np
-import warnings
 import pickle
 
-warnings.simplefilter('error',UserWarning)
 
 def gen_fp(fp, # List of fingerprint types to use
         A_id, # String containing elemental abbreviation for A metal
@@ -26,15 +24,6 @@ def gen_fp(fp, # List of fingerprint types to use
         # Bulk properties will need to be loaded
         # or passed here intelligently somehow
         # - not currently implemented
-
-# Warnings
-        if ('primary_ads.pauling_electronegativity' in fp) and \
-                ('all_ads.sum_pauling_electronegativity' in fp):
-		warnings.warn('Warning: '
-                'primary_ads.pauling_electronegativity and '
-                'all_ads.sum_pauling_enegativity are identical for '
-                'monatomic adsorbates')
-
 
 # A Block
         if 'A.atomic_number' in fp:
@@ -150,6 +139,16 @@ def gen_fp(fp, # List of fingerprint types to use
                 period = ele.period
                 fp_vals.append(period)
 
+        if 'primary_ads.num_bonds_wanted' in fp:
+                if ads_id in ['H_M', 'OH', 'OOH', 'NH2', 'NNH']:
+                        nbw = 1
+                elif ads_id in ['O', 'NH']:
+                        nbw = 2
+                elif ads_id in ['N']:
+                        nbw = 3
+
+                fp_vals.append(nbw)
+
         if 'all_ads.sum_pauling_electronegativity' in fp:
                 base_ele = element(primary_ads_id)
                 sum_eneg = base_ele.en_pauling
@@ -218,19 +217,22 @@ fp_all_options = [
         'primary_ads.atomic_number', 'primary_ads.atomic_radius',
         'primary_ads.pauling_electronegativity','primary_ads.dipole_polarizability',
         'primary_ads.first_ionization_energy', 'primary_ads.period',
+        'primary_ads.num_bonds_wanted',
         # all_ads refer to all adsorbate atoms
         'all_ads.sum_pauling_electronegativity'
 	]
 
 this_fp = [
-           'A.atomic_radius',
+           #'A.atomic_radius',
            'A.pauling_electronegativity',
            'A.dipole_polarizability',
            'A.first_ionization_energy',
-           'B.atomic_radius',
+           #'B.atomic_radius',
            'B.pauling_electronegativity',
            'B.dipole_polarizability',
            'B.first_ionization_energy',
+           'primary_ads.pauling_electronegativity',
+           'primary_ads.num_bonds_wanted',
            'all_ads.sum_pauling_electronegativity',
            'train.n=%d'%n_train # Leave this in
           ]
@@ -306,7 +308,7 @@ test_targets = test_fp_vals[1:,-1]
 train_fp_vals = train_fp_vals[1:,:-1]
 test_fp_vals = test_fp_vals[1:,:-1]
 
-feature_matrices = {'train_values':train_fp_vals, 'train':train_fp_keys,
+feature_matrices = {'train_values':train_fp_vals, 'train_labels':train_fp_keys,
         'test_values':test_fp_vals, 'test_labels':test_fp_keys,
         'train_targets': train_targets, 'test_targets': test_targets}
 
