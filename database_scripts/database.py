@@ -96,12 +96,24 @@ def query_out_to_set(query_out):
 	return returnset
 '''
 
+
+def features_exist(feature_names, dbpath = 'data.db'):
+	for name in feature_names:
+		query_out = sqlexecute(dbpath, 'select case when exists(select 1 from feature where name = ?) then 1 else 0 end',[name])
+		if int(query_out[0][0]) == 0:
+			return False
+	return True
+
+
+
 def feature_names_to_ID_set(feature_names, dbpath = 'data.db'):
 	### Input:
 	# feature_names: A list of feature names
 	# dbpath: string: a path to the database
 	### Output
 	# A set of IDs corresponding to those feature names
+	if features_exist(feature_names, dbpath) == False:
+		sys.exit('not all feature names in list exist')
 	feature_names = list_to_sql_set_string(feature_names)
 	query_out = sqlexecute(dbpath, "select id from feature where name in " + feature_names)
 	returnset = set()
@@ -134,6 +146,8 @@ def does_feature_subset_already_exist(feature_names, dbpath = 'data.db'):
 	# dbpath: string: a path to the database
 	### Output
 	# Boolean: True if the feature subset already exists, False if not
+	if features_exist(feature_names, dbpath) == False:
+		return False, None
 	feature_set = feature_names_to_ID_set(feature_names, dbpath)
 	featuresubsetids, existing_feature_sets = get_existing_feature_sets(dbpath)
 	if feature_set in existing_feature_sets:
