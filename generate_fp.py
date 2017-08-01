@@ -18,6 +18,7 @@ def gen_fp(fp, # List of fingerprint types to use
         ads_id, # String containing elemental abbreviation for
                      # adsorbate atoms
         target_value, # Adsorption energy; float
+        data_passed = None,
         ):
 
         fp_vals = []
@@ -56,6 +57,11 @@ def gen_fp(fp, # List of fingerprint types to use
                 period = ele.period
                 fp_vals.append(period)
 
+        if 'A.electron_affinity' in fp:
+                ele = element(A_id)
+                affinity = ele.electron_affinity
+                fp_vals.append(affinity)
+
 # B Block
         if 'B.atomic_number' in fp:
                 ele = element(B_id)
@@ -86,6 +92,11 @@ def gen_fp(fp, # List of fingerprint types to use
                 ele = element(B_id)
                 period = ele.period
                 fp_vals.append(period)
+
+        if 'B.electron_affinity' in fp:
+                ele = element(B_id)
+                affinity = ele.electron_affinity
+                fp_vals.append(affinity)
 
 # Ads Block
 
@@ -138,6 +149,11 @@ def gen_fp(fp, # List of fingerprint types to use
                 ele = element(primary_ads_id)
                 period = ele.period
                 fp_vals.append(period)
+
+        if 'primary_ads.electron_affinity' in fp:
+                ele = element(primary_ads_id)
+                affinity = ele.electron_affinity
+                fp_vals.append(affinity)
 
         if 'primary_ads.num_bonds_wanted' in fp:
                 if ads_id in ['H_M', 'OH', 'OOH', 'NH2', 'NNH']:
@@ -211,13 +227,15 @@ else:
 fp_all_options = [
         'A.atomic_number', 'A.atomic_radius', 'A.pauling_electronegativity',
         'A.dipole_polarizability', 'A.first_ionization_energy', 'A.period',
+        'A.electron_affinity', # Not defined for all elements, avoid
         'B.atomic_number', 'B.atomic_radius', 'B.pauling_electronegativity',
         'B.dipole_polarizability', 'B.first_ionization_energy', 'B.period',
+        'B.electron_affinity', # Not defined for all elements, avoid
         # primary_ads refers only to the adsorbate atom bound to the surface
         'primary_ads.atomic_number', 'primary_ads.atomic_radius',
         'primary_ads.pauling_electronegativity','primary_ads.dipole_polarizability',
         'primary_ads.first_ionization_energy', 'primary_ads.period',
-        'primary_ads.num_bonds_wanted',
+        'primary_ads.electron_affinity', 'primary_ads.num_bonds_wanted',
         # all_ads refer to all adsorbate atoms
         'all_ads.sum_pauling_electronegativity'
 	]
@@ -225,12 +243,12 @@ fp_all_options = [
 this_fp = [
            #'A.atomic_radius',
            'A.pauling_electronegativity',
-           'A.dipole_polarizability',
-           'A.first_ionization_energy',
+           #'A.dipole_polarizability',
+           #'A.first_ionization_energy',
            #'B.atomic_radius',
            'B.pauling_electronegativity',
-           'B.dipole_polarizability',
-           'B.first_ionization_energy',
+           #'B.dipole_polarizability',
+           #'B.first_ionization_energy',
            'primary_ads.pauling_electronegativity',
            'primary_ads.num_bonds_wanted',
            'all_ads.sum_pauling_electronegativity',
