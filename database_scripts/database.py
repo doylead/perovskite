@@ -60,7 +60,7 @@ def insert_feature(name, dbpath = 'data.db'):
 	return ID, status
 
 
-def insert_experiment(featuresubsetid, model_type, RMSE = None, architecture = None, activation_function = None, learning_rate = None, regularization = None, dbpath = 'data.db'):
+def insert_experiment(featuresubsetid, model_type, RMSE_train = None, RMSE_test = None ,architecture = None, activation_function = None, learning_rate = None, regularization = None, dbpath = 'data.db'):
 	query_out = sqlexecute(dbpath, "select ID from experiment where featuresubsetid = ? and model_type = ? and architecture = ? and activation_function = ? and learning_rate = ? and regularization = ?", [featuresubsetid, model_type, architecture, activation_function, learning_rate, regularization])
 	L = len(query_out)
 	if L == 0:
@@ -68,7 +68,7 @@ def insert_experiment(featuresubsetid, model_type, RMSE = None, architecture = N
 		createdby = getuser()
 		connection = sqlite3.connect(dbpath)
 		cursor = connection.cursor()
-		cursor.execute('insert into experiment(created, createdby, featuresubsetid, model_type, RMSE, architecture, activation_function, learning_rate, regularization) values(?,?,?,?,?,?,?,?,?)', [created, createdby, featuresubsetid, model_type, RMSE, architecture, activation_function, learning_rate, regularization])
+		cursor.execute('insert into experiment(created, createdby, featuresubsetid, model_type, RMSE_train, RMSE_test, architecture, activation_function, learning_rate, regularization) values(?,?,?,?,?,?,?,?,?,?)', [created, createdby, featuresubsetid, model_type, RMSE_train, RMSE_test, architecture, activation_function, learning_rate, regularization])
 		ID = cursor.lastrowid
 		connection.commit()
 		connection.close()
