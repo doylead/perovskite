@@ -2,11 +2,12 @@ import sqlite3
 
 conn = sqlite3.connect('data.db')
 c = conn.cursor()
-c.execute("SELECT id, featuresubsetid, model_type, RMSE FROM experiment ORDER BY RMSE")
+c.execute("SELECT id, featuresubsetid, model_type, RMSE_train, RMSE_test FROM experiment ORDER BY RMSE_train")
 
-header = 'id\t fsid\t model\t RMSE (eV)'
+header = 'exp id\t fsid\t model\t RMSE_train (eV)\t RMSE_test (eV)'
 print header
 
-for line in c.fetchall():  # Consier changing to range(n) later
-        print '%s\t %s\t %s\t %3.2f'%line
+for i in range(25):
+        line = c.fetchone()
+        print '%s\t %s\t %s\t %3.2f\t\t\t %3.2f'%line
 

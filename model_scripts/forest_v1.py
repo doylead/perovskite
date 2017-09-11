@@ -6,10 +6,7 @@ from database import insert_experiment
 from os import getcwd
 import numpy as np
 import pickle
-from sklearn import gaussian_process
-from sklearn.gaussian_process import GaussianProcessRegressor as GPR
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
-from sklearn.gaussian_process.kernels import WhiteKernel as WK
+from sklearn.ensemble import RandomForestRegressor
 
 normalization_data = pickle.load(open('../normalization_parameters.pickle'))
 mean_target = normalization_data['mean_vals'][-1]
@@ -27,29 +24,29 @@ n_features = train_values.shape[1]
 
 # Model Specific Information
 # -----------------------
-lbound = 1e-3
-rbound = 1e1
-n_restarts = 5
-kernel = C(1.0, (lbound,rbound)) * RBF(n_features*[10], (lbound,rbound)) + WK(noise_level_bounds=(lbound,rbound))
-gp = GPR(kernel=kernel, n_restarts_optimizer=n_restarts, alpha=1e-1)
-gp.fit(train_values, train_targets)
+ntrain = len(train_targets)
+ntest = len(test_targets)
+n_estimators = 500
+frac_features = 1
+max_features = int(np.ceil(train_values.shape[1]*frac_features))
 
-test_model, sigma2_pred_test = gp.predict(test_values, return_std=True)
-train_model, sigma2_pred_train = gp.predict(train_values, return_std=True)
+rf = RandomForestRegressor(n_estimators=n_estimators, max_features=max_features)
+rf.fit(train_values, train_targets)
+test_model = rf.predict(test_values)
+train_model = rf.predict(train_values)
+
 # -----------------------
 
 # Undo normalization in FP generation
 test_model = np.multiply(test_model,std_target) + mean_target
-sigma2_pred_test = np.multiply(sigma2_pred_test,std_target) # GP Specific
 test_targets = np.multiply(test_targets,std_target) + mean_target
 
 train_model = np.multiply(train_model,std_target) + mean_target
-sigma2_pred_train = np.multiply(sigma2_pred_train,std_target) # GP Specific
 train_targets = np.multiply(train_targets,std_target) + mean_target
 
 # Update database
-ntest = len(test_targets)
 err_model_test = np.abs(test_model - test_targets)
+err_model_train = np.abs(train_model - train_targets)
 RMSE_train = np.sqrt(np.dot(err_model_train, err_model_train)/ntrain)
 RMSE_test = np.sqrt(np.dot(err_model_test,err_model_test)/ntest)
 
@@ -81,15 +78,14 @@ std_output_file.close()
 #
 # Format for NN:
 # TBD
+#
+# Format for RF:
+# {'feature_importances': 1D-array}
 
 # Model Specific Information
 # -----------------------
-kernel_params = gp.kernel_
-print kernel_params
 
-model_output = {'train_set_uncertainty': sigma2_pred_test,
-        'test_set_uncertainty': sigma2_pred_train,
-        'kernel_params': kernel_params}
+model_output = {'feature_importances': rf.feature_importances_}
 
 model_output_file = open('model_specific_output.pickle','w')
 pickle.dump(model_output,model_output_file)
@@ -99,7 +95,7 @@ model_output_file.close()
 cwd = getcwd()
 FSDIR = cwd.split('/')[-2]
 FSID = int(FSDIR.strip('fp_'))
-model_type = 'gp' 
+model_type = 'rf_v1' 
 architecture = None
 activation_function = None
 learning_rate = None
@@ -109,7 +105,8 @@ dbpath = '../../data.db'
 ID, status = insert_experiment(featuresubsetid = FSID,
         dbpath = dbpath,
         model_type = model_type, 
-        RMSE = RMSE, 
+        RMSE_test = RMSE_test,
+        RMSE_train = RMSE_train,
         architecture = architecture, 
         activation_function = activation_function,
         learning_rate = learning_rate,
@@ -118,3 +115,4 @@ ID, status = insert_experiment(featuresubsetid = FSID,
 if status != 'inserted':
         print 'Error inserting experiment records into database'
 # -----------------------
+
