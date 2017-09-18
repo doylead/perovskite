@@ -121,7 +121,7 @@ for key in sorted_ads_rmse:
 # Plotting
 
 ntrain = len(train_labels)
-showTrain = False # Plot the training set?
+showTrain = True # Plot the training set?
 if showTrain:
         for i in range(ntrain):
                 datum = train_labels[i].split(' ')
