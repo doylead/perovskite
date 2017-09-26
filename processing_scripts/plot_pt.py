@@ -4,7 +4,10 @@ import numpy as np
 import pickle
 
 def plot_periodic_table(vals_dict, title, cmap='YlGn', 
-        vmin = 0, vmax = 1.5, show=True, filename=None):
+        vmin = 0, vmax = 1.5, show=True, filename=None,
+        thresh = None, num_format='%3.2f'):
+        if not thresh:
+                thresh = 2.*(vmax-vmin)/3
         # Only supports up to atomic number 112
         positions = {
         'H': (0, 0), 'He': (0, 17),
@@ -50,7 +53,7 @@ def plot_periodic_table(vals_dict, title, cmap='YlGn',
                 plt.plot([y-0.5,y+0.5],[x+0.5,x+0.5],lw=3,color='black')
                 plt.plot([y+0.5,y+0.5],[x-0.5,x+0.5],lw=3,color='black')
                 plt.plot([y-0.5,y-0.5],[x-0.5,x+0.5],lw=3,color='black')
-                if rmse > 1.0:
+                if rmse > thresh:
                         color='white'
                 else:
                         color='black'
@@ -60,7 +63,7 @@ def plot_periodic_table(vals_dict, title, cmap='YlGn',
                         fontproperties=font,
                         color=color)
                 plt.text(x=y, y=x+0.2,
-                        s='%3.2f'%rmse, fontsize=14,
+                        s=num_format%rmse, fontsize=14,
                         horizontalalignment='center',
                         fontproperties=font,
                         color=color)

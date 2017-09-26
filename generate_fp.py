@@ -36,9 +36,6 @@ def gen_fp(fp, # List of fingerprint types to use
         n_fp = len(fp)
         fp_vals = []
         all_vals = {}
-        # Bulk properties will need to be loaded
-        # or passed here intelligently somehow
-        # - not currently implemented
 
 # A Block
         ele = atomic_properties(A_id)
@@ -48,7 +45,6 @@ def gen_fp(fp, # List of fingerprint types to use
         all_vals['A.dipole_polarizability'] = ele.dipole_polarizability	
         all_vals['A.first_ionization_energy'] = first_ionization = ele.ionenergies[1]
         all_vals['A.period'] = ele.period
-        all_vals['A.electron_affinity'] = ele.electron_affinity
 
 # B Block
         ele = atomic_properties(B_id)
@@ -58,7 +54,6 @@ def gen_fp(fp, # List of fingerprint types to use
         all_vals['B.dipole_polarizability'] = ele.dipole_polarizability
         all_vals['B.first_ionization_energy'] = first_ionization = ele.ionenergies[1]
         all_vals['B.period'] = ele.period
-        all_vals['B.electron_affinity'] = ele.electron_affinity
 
 # Ads Block
 	# Determine the primary adsorbate
@@ -85,10 +80,9 @@ def gen_fp(fp, # List of fingerprint types to use
         all_vals['primary_ads.atomic_number'] = ele.atomic_number
         all_vals['primary_ads.atomic_radius'] = ele.atomic_radius
         all_vals['primary_ads.pauling_electronegativity'] = ele.en_pauling
-        all_vals['priamry_ads.dipole_polarizability'] = ele.dipole_polarizability	
+        all_vals['primary_ads.dipole_polarizability'] = ele.dipole_polarizability	
         all_vals['primary_ads.first_ionization_energy'] = ele.ionenergies[1]
         all_vals['primary_ads.period'] = ele.period
-        all_vals['primary_ads.electron_affinity'] = ele.electron_affinity
 
         if ads_id in ['H_M', 'OH', 'OOH', 'NH2', 'NNH']:
                 nbw = 1
@@ -138,11 +132,16 @@ def gen_fp(fp, # List of fingerprint types to use
 # Catalyst Properties
 
         all_vals['cat.lattice_constant'] = data_passed['perovskite_lc'][A_id+B_id+'O3']
+        all_vals['cat.O_pband_int'] = data_passed['perovskite_electronic'][A_id+B_id+'O3']['O']['int']
+        all_vals['cat.O_pband_center'] = data_passed['perovskite_electronic'][A_id+B_id+'O3']['O']['center']
+        all_vals['cat.O_pband_width'] = data_passed['perovskite_electronic'][A_id+B_id+'O3']['O']['width']
 
 # Extracts from dictionary
         for i in range(n_fp):
                 this_feature = fp[i]
-                fp_vals.append( all_vals[this_feature] )
+                for key in all_vals.keys():
+                        this_feature = this_feature.replace(key,str(all_vals[key]))
+                fp_vals.append( eval(this_feature) )
 
 # Adds target value
 	fp_vals.append(target_value)
@@ -197,52 +196,80 @@ else:
 fp_all_options = [
         'A.atomic_number', 'A.atomic_radius', 'A.pauling_electronegativity',
         'A.dipole_polarizability', 'A.first_ionization_energy', 'A.period',
-        'A.electron_affinity', # Not defined for all elements, avoid
-        'B.atomic_number', 'B.atomic_radius', 'B.pauling_electronegativity',
         'B.dipole_polarizability', 'B.first_ionization_energy', 'B.period',
-        'B.electron_affinity', # Not defined for all elements, avoid
         # primary_ads refers only to the adsorbate atom bound to the surface
         'primary_ads.atomic_number', 'primary_ads.atomic_radius',
         'primary_ads.pauling_electronegativity','primary_ads.dipole_polarizability',
         'primary_ads.first_ionization_energy', 'primary_ads.period',
-        'primary_ads.electron_affinity', 'primary_ads.num_bonds_wanted',
+        'primary_ads.num_bonds_wanted',
         # all_ads refer to all adsorbate atoms
         'all_ads.sum_pauling_electronegativity',
         'all_ads.Pt_terrace_binding_energy',
         # cat refers to catalyst properties
-        'cat.lattice_constant',
+        'cat.lattice_constant', 'cat.O_pband_int', 'cat.O_pband_center',
+        'cat.O_pband_width',
 	]
 
 this_fp = [ # So far have all values for 1x(A.X),1x(B.X),all_ads.Pt_terrace_binding_energy
         'A.pauling_electronegativity',
-        'A.atomic_radius',
-        #'A.dipole_polarizability',
-        #'A.first_ionization_energy',
+#        'A.atomic_radius',
+#        'A.period',
+        'A.dipole_polarizability',
+        'A.first_ionization_energy',
         'B.pauling_electronegativity',
-        'B.atomic_radius',
+#        'B.atomic_radius',
+#        'B.period',
         'B.dipole_polarizability',
-        #'B.first_ionization_energy',
-        #'primary_ads.pauling_electronegativity',
-        #'primary_ads.num_bonds_wanted',
-        #'all_ads.sum_pauling_electronegativity',
-        #'all_ads.Ni_terrace_binding_energy',
-        'all_ads.Pt_terrace_binding_energy',
-        #'all_ads.Ag_terrace_binding_energy',
-        #'all_ads.Ir_terrace_binding_energy',
-        #'all_ads.Au_terrace_binding_energy',
-        #'all_ads.Fe_terrace_binding_energy',
-        #'all_ads.Pd_terrace_binding_energy',
-        #'all_ads.Rh_terrace_binding_energy',
+        'B.first_ionization_energy',
+        'primary_ads.pauling_electronegativity',
+#        'primary_ads.atomic_radius',
+#        'primary_ads.period',
+        'primary_ads.dipole_polarizability',
+#        'primary_ads.first_ionization_energy',
+        'primary_ads.num_bonds_wanted',
+        'all_ads.sum_pauling_electronegativity',
+#        'all_ads.Ni_terrace_binding_energy',
+#        'all_ads.Pt_terrace_binding_energy',
+#        'all_ads.Ag_terrace_binding_energy',
+#        'all_ads.Ir_terrace_binding_energy',
+#        'all_ads.Au_terrace_binding_energy',
+        'all_ads.Fe_terrace_binding_energy',
+#        'all_ads.Pd_terrace_binding_energy',
+#        'all_ads.Rh_terrace_binding_energy',
         'all_ads.Cu_terrace_binding_energy',
-        #'cat.lattice_constant',
-        'train.n=%d'%n_train,
+#        'cat.lattice_constant',
+        'cat.O_pband_int',
+        'cat.O_pband_center',
+        'cat.O_pband_width',
+        #'train.n=%d'%n_train,
         ]
 
+composite_fp = []
+
+for i in range(len(this_fp)):
+        xi = this_fp[i]
+        composite_fp.append(xi)
+        divsafe_i = (xi != 'all_ads.sum_pauling_electronegativity')
+        if divsafe_i:
+                composite_fp.append('1./'+xi)
+        for j in range(len(this_fp)):
+                xj = this_fp[j]
+                divsafe_j = ('all_ads.sum_pauling_electronegativity' != xj)
+                if i>=j:
+                        composite_fp.append(xi+'*'+xj)
+                        if divsafe_i and divsafe_j:
+                                composite_fp.append('1./('+xi+'*'+xj+')')
+                if i!=j and divsafe_j:
+                        composite_fp.append('1.*'+xi+'/'+xj)
+
+composite_fp.append('train.n=%d'%n_train)
+print 'Composite Feature List Generated'
+sys.stdout.flush()
 
 # ------ <END: Users should only modify code within this block> ------ #
 
 
-ID,status = add_feature_set(this_fp,'data.db')
+ID,status = add_feature_set(composite_fp,'data.db')
 
 if status=='already existed':
         print 'Feature set already exists, check %05f'%ID
@@ -255,21 +282,24 @@ mkdir(newdir)
 chdir(newdir)
 md_filename = 'fp_instructions.md'
 md_file = open(md_filename,'w')
-for instruction in this_fp:
+for instruction in composite_fp:
         print >>md_file,instruction
 md_file.close()
-this_fp.remove('train.n=%d'%n_train) # Because train.n is not used in regression
+composite_fp.remove('train.n=%d'%n_train) # Because train.n is not used in regression
 
-n_features = len(this_fp)
+n_features = len(composite_fp)
 fp_vals = np.empty(n_features+1)
 fp_keys = []
 atomic_properties = Atomic_Properties()
 
 metal_ads = pickle.load(open('../data_files/min_elec_energies_fcc.pkl','rb'))
 perovskite_lc = pickle.load(open('../data_files/lc_1x1.pckl','rb'))
+perovskite_electronic = pickle.load(open('../data_files/perovskite_pdos_features.pickle','rb'))
 data_passed = {'metal_ads': metal_ads,
-                'perovskite_lc': perovskite_lc}
+                'perovskite_lc': perovskite_lc,
+                'perovskite_electronic': perovskite_electronic}
 
+rowcount = 0
 for key in data.keys():
         atoms_object = Atoms(key)
         A_id = atoms_object[0].symbol
@@ -277,7 +307,7 @@ for key in data.keys():
         for ads_id in data[key].keys():
                 if ads_id not in exclude_ads:
                         this_target = data[key][ads_id]
-                        this_fp_val = gen_fp(fp=this_fp,
+                        this_fp_val = gen_fp(fp=composite_fp,
                                 A_id=A_id,
                                 B_id=B_id,
                                 ads_id=ads_id,
@@ -285,6 +315,9 @@ for key in data.keys():
                                 atomic_properties=atomic_properties,
                                 data_passed=data_passed)
                         fp_vals = np.vstack((fp_vals, this_fp_val))
+                        rowcount += 1
+                        print 'Parsed Row %d of %d'%(rowcount,n_total)
+                        sys.stdout.flush()
 			fp_keys.append('%s, %s ads'%(key,ads_id))
 
 fp_vals = fp_vals[1:,:]

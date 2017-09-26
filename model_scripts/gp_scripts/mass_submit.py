@@ -5,7 +5,7 @@ from subprocess import call
 from glob import glob
 
 cwd = getcwd()
-fp_number = 20
+fp_number = 59
 
 files = glob('gp_v*.py')
 files.sort()
